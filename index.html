@@ -3,78 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sheep Herder Pro - Web Edition</title>
+    <title>Sheep Herder - Twin Stick Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87ceeb; font-family: 'Segoe UI', sans-serif; touch-action: none; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #222; font-family: sans-serif; touch-action: none; user-select: none; }
+        #ui { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; text-shadow: 1px 1px 2px black; z-index: 100; }
         
-        /* UI共通 */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-        .pointer-on { pointer-events: auto; }
-
-        /* カウンター & ミッション */
-        #hud { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        #counter { font-size: 32px; font-weight: bold; }
-        #mission-box { 
-            margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.4); 
-            border-left: 4px solid #ffff00; border-radius: 0 4px 4px 0;
-        }
-        #mission-title { font-size: 12px; color: #ffff00; font-weight: bold; }
-
-        /* ボタン */
         #view-btn {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            padding: 10px 20px; background: rgba(0,0,0,0.6); color: white;
-            border: 1px solid white; border-radius: 20px; font-weight: bold; cursor: pointer;
+            width: 80px; height: 40px; background: rgba(0, 0, 0, 0.6); color: white;
+            border: 1px solid white; border-radius: 5px; font-weight: bold; cursor: pointer; z-index: 110;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
         }
 
-        /* ジョイスティック */
+        #counter {
+            font-size: 20px; font-weight: bold;
+        }
+
+        /* 追加: リセットボタンのスタイル */
+        #reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 110px; /* 視点切り替えボタンの左隣 */
+            width: 80px;
+            height: 40px;
+            background: rgba(255, 0, 0, 0.5);
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 500; /* ジョイスティックより手前に */
+            font-size: 20px;
+        }
+
+        /* ジョイスティック共通スタイル */
         .joy-container {
-            position: absolute; bottom: 40px; width: 100px; height: 100px;
-            background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 50%;
+            position: absolute; 
+            bottom: 40px; width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.468); 
+            border: 2px solid rgba(255, 255, 255, 0);
+            border-radius: 50%; 
+            z-index: 100; 
+            touch-action: none;
         }
         .joy-stick {
-            position: absolute; top: 50%; left: 50%; width: 40px; height: 40px;
-            margin: -20px 0 0 -20px; background: rgba(255,255,255,0.4); border-radius: 50%;
+            position: absolute; 
+            top: 50%; left: 50%; width: 50px; height: 50px;
+            margin: -25px 0 0 -25px; 
+            background: rgb(0, 0, 0);
+            border-radius: 50%; 
+            pointer-events: none;
         }
-        #left-joy { left: 40px; }
-        #right-joy { right: 40px; }
+        #left-joy { left: 40px; }   /* 移動用 */
+        #right-joy { right: 40px; } /* 視点用 */
+
+        /* ミッションボックス */
+        #mission-box {
+            position: absolute; top: 60px; left: 10px;
+            background: rgba(0, 0, 0, 0.5); color: white;
+            padding: 10px; border-left: 4px solid #ffff00;
+            pointer-events: none; z-index: 100;
+        }
+        #mission-title { font-weight: bold; font-size: 20px; color: #ffff00; }
+        #mission-text { font-size: 16px; margin-top: 4px; }
 
         /* クリア画面 */
         #clear-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none; /* 最初は隠しておく */
             flex-direction: column; align-items: center; justify-content: center;
             color: white; z-index: 1000;
         }
-        #clear-screen h1 { font-size: 48px; color: #ffff00; margin: 0; }
-        #restart-btn {
-            margin-top: 30px; padding: 15px 40px; font-size: 20px;
-            background: transparent; color: white; border: 2px solid white;
-            border-radius: 30px; cursor: pointer; transition: 0.3s;
+        #clear-content { text-align: center; font-size: 20px; }
+        #clear-content h1 { font-size: 48px; color: #ffff00; margin-bottom: 20px; }
+        #restart-btn-clear {
+            padding: 10px 20px; font-size: 20px; cursor: pointer;
+            background: #444; color: white; border: 2px solid white; border-radius: 10px;
         }
-        #restart-btn:hover { background: white; color: black; }
     </style>
 </head>
 <body>
-    <div id="ui-layer">
-        <div id="hud">
-            <div id="counter">Enclosed: 0 / 20</div>
-            <div id="mission-box">
-                <div id="mission-title">MISSION</div>
-                <div id="mission-text">全ての羊をゴールエリアへ誘導しろ！</div>
-            </div>
-        </div>
-        <div id="view-btn" class="pointer-on">VIEW: TPS</div>
-        <div id="left-joy" class="joy-container pointer-on"><div id="left-stick" class="joy-stick"></div></div>
-        <div id="right-joy" class="joy-container pointer-on"><div id="right-stick" class="joy-stick"></div></div>
+    <!-- UI表示 -->
+    <div id="ui"><div id="counter">Enclosed: 0 / 20</div></div>
+    <div id="mission-box">
+        <div id="mission-title">MISSION</div>
+        <div id="mission-text">Herd all the sheep to the goal area! <br> 全ての羊をゴールエリアへ誘導しろ！</div>
     </div>
 
-    <div id="clear-screen" class="pointer-on">
-        <h1>MISSION COMPLETE</h1>
-        <p>全ての羊を柵の中に保護しました！</p>
-        <button id="restart-btn">PLAY AGAIN</button>
+    <div id="clear-screen">
+        <div id="clear-content">
+            <h1>MISSION COMPLETE</h1>
+            <p>All sheep collected!</p>
+            <button id="restart-btn-clear">Play Again</button>
+        </div>
     </div>
+
+    <!-- ボタン -->
+    <div id="view-btn">TPS</div>
+    <button id="reset-btn">RESET</button>
+
+    <!-- ジョイスティック -->
+    <div id="left-joy" class="joy-container"><div id="left-stick" class="joy-stick"></div></div>
+    <div id="right-joy" class="joy-container"><div id="right-stick" class="joy-stick"></div></div>
 
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -83,167 +114,299 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 定数・フラグ ---
+        // --- 設定 ---
         const NS = 20, WIDTH = 40, DEPTH = 40;
         const GOAL_POS = new THREE.Vector3(14, 0, 14), GOAL_SIZE = new THREE.Vector3(10, 1, 10);
-        const LIMIT_X = WIDTH/2 - 0.8, LIMIT_Z = DEPTH/2 - 0.8;
-        let isFPS = false, isCleared = false, yaw = 0, pitch = 0;
+        
+        let isFPS = false, yaw = 0, pitch = 0;
+        const moveVector = new THREE.Vector2(0, 0); // 移動用
+        const lookVector = new THREE.Vector2(0, 0); // 視点用
+        const lookSpeed = 0.05; // 視点回転の速さ
 
-        // --- シーン構築 ---
+        // --- Three.js セットアップ ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 20, 60);
+        // キャンバスを使って簡易的な空のグラデーション画像を作成する
+        const canvas = document.createElement('canvas');
+        canvas.width = 2;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        const gradient = context.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, '#1e90ff'); // 上の方は濃い青
+        gradient.addColorStop(0.5, '#87ceeb'); // 真ん中は水色
+        gradient.addColorStop(1, '#ffffff'); // 下の方は白（地平線）
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 2, 512);
+
+        const skyTexture = new THREE.CanvasTexture(canvas);
+        scene.background = skyTexture;
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
-        light.position.set(20, 40, 20);
-        scene.add(light);
+        light.position.set(20, 40, 20); scene.add(light);
         scene.add(new THREE.AmbientLight(0x666666));
 
-        // 地面 & グリッド
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH, DEPTH), new THREE.MeshStandardMaterial({ color: 0x4a7c44 }));
-        floor.rotation.x = -Math.PI / 2;
-        scene.add(floor);
+        floor.rotation.x = -Math.PI / 2; scene.add(floor);
+
+        // グリッドヘルパーを追加（サイズ、分割数、中心線の色、格子の色）
         const grid = new THREE.GridHelper(WIDTH, 20, 0xffffff, 0xffffff);
-        grid.material.opacity = 0.1; grid.material.transparent = true;
+        grid.material.opacity = 0.2;
+        grid.material.transparent = true;
         scene.add(grid);
 
-        // ゴール
-        const goalArea = new THREE.Mesh(new THREE.BoxGeometry(GOAL_SIZE.x, 0.1, GOAL_SIZE.z), new THREE.MeshStandardMaterial({ color: 0xffff00, transparent: true, opacity: 0.2 }));
-        goalArea.position.copy(GOAL_POS);
+        // 簡易的な柵（フェンス）の作成
+        const fenceMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // 茶色
+        const fenceGeo = new THREE.BoxGeometry(WIDTH, 1.0, 0.2); // 横長の板
+
+        // 北の壁
+        const wallN = new THREE.Mesh(fenceGeo, fenceMat);
+        wallN.position.set(0, 0.5, -DEPTH / 2);
+        scene.add(wallN);
+
+        // 南の壁
+        const wallS = new THREE.Mesh(fenceGeo, fenceMat);
+        wallS.position.set(0, 0.5, DEPTH / 2);
+        scene.add(wallS);
+
+        // 東西の壁は回転させて配置
+        const fenceGeoSide = new THREE.BoxGeometry(0.2, 1.0, DEPTH);
+        const wallE = new THREE.Mesh(fenceGeoSide, fenceMat);
+        wallE.position.set(WIDTH / 2, 0.5, 0);
+        scene.add(wallE);
+
+        const wallW = new THREE.Mesh(fenceGeoSide, fenceMat);
+        wallW.position.set(-WIDTH / 2, 0.5, 0);
+        scene.add(wallW);
+
+        // const goalArea = new THREE.Mesh(new THREE.BoxGeometry(GOAL_SIZE.x, 0.1, GOAL_SIZE.z), new THREE.MeshStandardMaterial({ color: 0xffa500, transparent: true, opacity: 0.8 }));
+        // goalArea.position.copy(GOAL_POS); scene.add(goalArea);
+
+        const sheepList = [];
+        const sheepMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+
+        for (let i = 0; i < NS; i++) {
+            // 1. まず空のグループ（Unityの空のGameObject）を作る
+            const sheepGroup = new THREE.Group();
+
+            // 2. 体を作ってグループに入れる
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 1.0), sheepMat);
+            body.position.set(0, 0, 0); // グループ内での相対位置
+            sheepGroup.add(body);
+
+            // 3. 頭を作ってグループに入れる
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), sheepMat);
+            head.position.set(0, 0.3, 0.5); // 体より少し上、少し前に
+            sheepGroup.add(head);
+
+            // 4. グループ全体の初期位置を決める（ワールド座標）
+            sheepGroup.position.set(Math.random() * 20 - 10, 0.35, Math.random() * 20 - 10);
+            
+            // 5. シーンに追加し、管理リストに登録する
+            scene.add(sheepGroup);
+            sheepList.push({ 
+                mesh: sheepGroup, // これで animate 内の mesh.position はグループ全体を動かすことになる
+                velocity: new THREE.Vector3(), 
+                isGoal: false, 
+                hasTarget: false, 
+                targetPos: new THREE.Vector3() 
+            });
+        }
+
+        // --- ゴールエリアの作成 (文字付き) ---
+        // 1. 文字を描くためのキャンバスを作成
+        const goalCanvas = document.createElement('canvas'); // 名前を固有にする
+        const ctx = goalCanvas.getContext('2d');
+        goalCanvas.width = 512;
+        goalCanvas.height = 512;
+
+        // 背景（半透明の黄色）
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+        ctx.fillRect(0, 0, 512, 512);
+
+        // 文字の設定
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 60px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('GOAL AREA', 256, 256);
+
+        // 2. キャンバスをテクスチャに変換
+        const goalTexture = new THREE.CanvasTexture(goalCanvas);
+
+        // 3. テクスチャを貼った板を作成
+        const goalGeo = new THREE.PlaneGeometry(10, 10); // 直接数字を入れると安全
+        const goalMat = new THREE.MeshBasicMaterial({ 
+            map: goalTexture, 
+            transparent: true,
+            side: THREE.DoubleSide // 両面描画（念のため）
+        });
+        const goalArea = new THREE.Mesh(goalGeo, goalMat);
+
+        // 床の少し上（0.02）に浮かせて配置（Z-fighting防止）
+        goalArea.position.set(14, 0.02, 14); 
+        goalArea.rotation.x = -Math.PI / 2;
         scene.add(goalArea);
 
-        // 外壁（柵）
-        const fenceMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
-        const createWall = (w, h, d, x, z, ry=0) => {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), fenceMat);
-            m.position.set(x, h/2, z); m.rotation.y = ry; scene.add(m);
-        };
-        createWall(WIDTH, 1, 0.2, 0, -DEPTH/2); createWall(WIDTH, 1, 0.2, 0, DEPTH/2);
-        createWall(0.2, 1, DEPTH, -WIDTH/2, 0); createWall(0.2, 1, DEPTH, WIDTH/2, 0);
+        // 犬（プレイヤー）
+        const dog = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.2), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+        dog.position.set(-15, 0.4, -15); scene.add(dog);
 
-        // 羊の生成
-        const sheepList = [];
-        const sheepMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        for (let i = 0; i < NS; i++) {
-            const group = new THREE.Group();
-            group.add(new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 1.0), sheepMat)); // Body
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), sheepMat);
-            head.position.set(0, 0.3, 0.5); group.add(head); // Head
-            group.position.set(Math.random()*20-10, 0.35, Math.random()*20-10);
-            scene.add(group);
-            sheepList.push({ mesh: group, velocity: new THREE.Vector3(), isGoal: false, targetPos: new THREE.Vector3() });
-        }
-
-        const dog = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.2), new THREE.MeshStandardMaterial({ color: 0x212121 }));
-        dog.position.set(-15, 0.4, -15);
-        scene.add(dog);
-
-        // --- 操作系クラス ---
+        // --- ジョイスティック制御クラス ---
         class Joystick {
-            constructor(id, stickId) {
-                this.dom = document.getElementById(id);
+            constructor(containerId, stickId, onUpdate) {
+                this.container = document.getElementById(containerId);
                 this.stick = document.getElementById(stickId);
-                this.vector = new THREE.Vector2();
                 this.active = false;
-                this.dom.addEventListener('pointerdown', e => { this.active = true; this.update(e); e.stopPropagation(); });
-                window.addEventListener('pointermove', e => { if(this.active) this.update(e); });
-                window.addEventListener('pointerup', () => { this.active = false; this.vector.set(0,0); this.stick.style.transform = `translate(0,0)`; });
+                this.vector = new THREE.Vector2(0, 0);
+
+                this.container.addEventListener('pointerdown', e => {
+                    this.active = true;
+                    this.update(e.clientX, e.clientY);
+                    e.stopPropagation();
+                });
+                window.addEventListener('pointermove', e => {
+                    if (this.active) this.update(e.clientX, e.clientY);
+                });
+                window.addEventListener('pointerup', () => {
+                    this.active = false;
+                    this.stick.style.transform = `translate(0, 0)`;
+                    this.vector.set(0, 0);
+                });
             }
-            update(e) {
-                const r = this.dom.getBoundingClientRect();
-                const center = new THREE.Vector2(r.left + r.width/2, r.top + r.height/2);
-                const d = new THREE.Vector2(e.clientX - center.x, e.clientY - center.y);
-                const len = Math.min(d.length(), r.width/2);
-                d.normalize().multiplyScalar(len);
-                this.stick.style.transform = `translate(${d.x}px, ${d.y}px)`;
-                this.vector.set(d.x / (r.width/2), d.y / (r.width/2));
+
+            update(clientX, clientY) {
+                const rect = this.container.getBoundingClientRect();
+                const center = new THREE.Vector2(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                const delta = new THREE.Vector2(clientX - center.x, clientY - center.y);
+                const maxLen = rect.width / 2;
+                const len = Math.min(delta.length(), maxLen);
+                delta.normalize().multiplyScalar(len);
+                this.stick.style.transform = `translate(${delta.x}px, ${delta.y}px)`;
+                this.vector.set(delta.x / maxLen, delta.y / maxLen);
             }
         }
+
         const leftJoy = new Joystick('left-joy', 'left-stick');
         const rightJoy = new Joystick('right-joy', 'right-stick');
 
-        // 視点切り替え
-        const vBtn = document.getElementById('view-btn');
-        vBtn.addEventListener('click', () => {
-            isFPS = !isFPS; vBtn.innerText = isFPS ? "VIEW: FPS" : "VIEW: TPS";
+        const viewBtn = document.getElementById('view-btn');
+        viewBtn.addEventListener('click', () => {
+            isFPS = !isFPS; viewBtn.innerText = isFPS ? "FPS" : "TPS";
             camera.fov = isFPS ? 80 : 60; camera.updateProjectionMatrix();
         });
 
-        // リスタート機能
-        const restartGame = () => {
-            isCleared = false; document.getElementById('clear-screen').style.display = 'none';
+        const resetBtn = document.getElementById('reset-btn');
+        resetBtn.addEventListener('click', () => {
+            // すべての羊を中央付近に戻す
             sheepList.forEach(s => {
-                s.mesh.position.set(Math.random()*20-10, 0.35, Math.random()*20-10);
-                s.velocity.set(0,0,0); s.isGoal = false;
+                s.mesh.position.set(Math.random() * 10 - 5, 0.35, Math.random() * 10 - 5);
+                s.velocity.set(0, 0, 0);
+                s.isGoal = false;
             });
+            // 犬も初期位置へ
             dog.position.set(-15, 0.4, -15);
-        };
-        document.getElementById('restart-btn').addEventListener('click', restartGame);
+        });
 
-        // --- ループ ---
+        // ゲームクリア判定変数
+        let isCleared = false;
+
+        // --- アニメーションループ ---
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
             const dt = Math.min(clock.getDelta(), 0.05);
-            if (isCleared) { renderer.render(scene, camera); return; }
 
-            // 犬の移動 & 制限
-            if (leftJoy.vector.length() > 0.1) {
+            // 1. 移動：左スティック
+            if (leftJoy.vector.length() > 0.01) {
                 const move = new THREE.Vector3(leftJoy.vector.x, 0, leftJoy.vector.y);
-                move.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), yaw));
+                const moveRot = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                move.applyQuaternion(moveRot);
                 dog.position.add(move.normalize().multiplyScalar(12 * dt));
                 dog.lookAt(dog.position.clone().add(move));
-            }
-            dog.position.x = Math.max(-LIMIT_X, Math.min(LIMIT_X, dog.position.x));
-            dog.position.z = Math.max(-LIMIT_Z, Math.min(LIMIT_Z, dog.position.z));
+                // 犬の座標を制限する (境界値のチェック)
+                const limitX = WIDTH / 2 - 0.5; // 20 - 0.5 = 19.5
+                const limitZ = DEPTH / 2 - 0.5;
 
-            // 視点回転
+                dog.position.x = Math.max(-limitX, Math.min(limitX, dog.position.x));
+                dog.position.z = Math.max(-limitZ, Math.min(limitZ, dog.position.z));
+            }
+
+            // 2. 視点：右スティック
             if (rightJoy.active) {
-                yaw -= rightJoy.vector.x * 0.06;
-                pitch = Math.max(-0.8, Math.min(0.8, pitch - rightJoy.vector.y * 0.04));
+                yaw -= rightJoy.vector.x * lookSpeed;
+                pitch -= rightJoy.vector.y * lookSpeed;
+                pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, pitch));
             }
 
-            // 羊のロジック
+            // 羊のロジック (簡略化)
             let goalCount = 0;
             sheepList.forEach(s => {
-                const p = s.mesh.position;
-                if (!s.isGoal && Math.abs(p.x - GOAL_POS.x) < GOAL_SIZE.x/2 && Math.abs(p.z - GOAL_POS.z) < GOAL_SIZE.z/2) s.isGoal = true;
+                const pos = s.mesh.position;
+                if (!s.isGoal && Math.abs(pos.x - GOAL_POS.x) < GOAL_SIZE.x/2 && Math.abs(pos.z - GOAL_POS.z) < GOAL_SIZE.z/2) s.isGoal = true;
                 if (s.isGoal) {
                     goalCount++;
-                    if (p.distanceTo(s.targetPos) < 1) s.targetPos.set(GOAL_POS.x + (Math.random()-0.5)*8, 0.35, GOAL_POS.z + (Math.random()-0.5)*8);
-                    s.velocity.lerp(s.targetPos.clone().sub(p).normalize().multiplyScalar(3), 0.05);
+                    if (!s.hasTarget || pos.distanceTo(s.targetPos) < 1.0) {
+                        s.targetPos.set(GOAL_POS.x + (Math.random()-0.5)*8, 0.35, GOAL_POS.z + (Math.random()-0.5)*8);
+                        s.hasTarget = true;
+                    }
+                    s.velocity.lerp(s.targetPos.clone().sub(pos).normalize().multiplyScalar(3), 0.05);
                 } else {
                     let f = new THREE.Vector3();
-                    if (p.distanceTo(dog.position) < 18) f.add(p.clone().sub(dog.position).setY(0).normalize().multiplyScalar(2.5));
-                    if (Math.abs(p.x) > 18) f.x += p.x > 0 ? -4 : 4;
-                    if (Math.abs(p.z) > 18) f.z += p.z > 0 ? -4 : 4;
-                    s.velocity.add(f.multiplyScalar(dt*10)).setLength(Math.min(s.velocity.length(), 8));
+                    if (pos.distanceTo(dog.position) < 18) f.add(pos.clone().sub(dog.position).setY(0).normalize().multiplyScalar(2));
+                    if (Math.abs(pos.x) > 18) f.x += pos.x > 0 ? -4 : 4;
+                    if (Math.abs(pos.z) > 18) f.z += pos.z > 0 ? -4 : 4;
+                    s.velocity.add(f.multiplyScalar(dt * 10)).setLength(Math.min(s.velocity.length(), 7));
                 }
-                p.add(s.velocity.clone().multiplyScalar(dt));
-                if(s.velocity.length() > 0.1) s.mesh.lookAt(p.clone().add(s.velocity));
+                pos.add(s.velocity.clone().multiplyScalar(dt));
+                if (s.velocity.length() > 0.1) s.mesh.lookAt(pos.clone().add(s.velocity));
             });
 
             document.getElementById('counter').innerText = `Enclosed: ${goalCount} / ${NS}`;
-            if (goalCount === NS) { isCleared = true; document.getElementById('clear-screen').style.display = 'flex'; }
 
-            // カメラ
+            // ゲームクリア判定
+            if (!isCleared && goalCount === NS) {
+                isCleared = true;
+                showClearScreen();
+            }
+
+            // カメラ配置
             if (isFPS) {
-                camera.position.copy(dog.position).add(new THREE.Vector3(0, 0.7, 0));
+                camera.position.copy(dog.position).add(new THREE.Vector3(0, 0.6, 0));
                 camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
             } else {
-                const off = new THREE.Vector3(0, 15, 18).applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), yaw));
-                camera.position.copy(dog.position).add(off); camera.lookAt(dog.position);
+                const offset = new THREE.Vector3(0, 15, 18).applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw));
+                camera.position.copy(dog.position).add(offset);
+                camera.lookAt(dog.position);
             }
             renderer.render(scene, camera);
         }
         animate();
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+        // --- クリア画面表示関数 ---
+        function showClearScreen() {
+            isCleared = true;
+            document.getElementById('clear-screen').style.display = 'flex';
+        }
+
+        // --- リスタート処理の統合 ---
+        const restartFunc = () => {
+            isCleared = false;
+            document.getElementById('clear-screen').style.display = 'none';
+            // 羊と犬をリセットする既存の処理をここに書く
+            sheepList.forEach(s => {
+                s.mesh.position.set(Math.random() * 20 - 10, 0.35, Math.random() * 20 - 10);
+                s.velocity.set(0, 0, 0);
+                s.isGoal = false;
+            });
+            dog.position.set(-15, 0.4, -15);
+            requestAnimationFrame(animate); // ループ再開
+        };
+
+        document.getElementById('restart-btn-clear').addEventListener('click', restartFunc);
     </script>
 </body>
 </html>
