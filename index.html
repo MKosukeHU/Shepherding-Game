@@ -116,7 +116,7 @@
         <div id="clear-content">
             <h1>MISSION COMPLETE</h1>
             <p>All sheep collected!</p>
-            <button id="restart-btn-clear">Play Again</button>
+            <button id="restart-btn-clear">Play again! <br> (Press the B button on the GamePad)</button>
         </div>
     </div>
 
@@ -332,6 +332,71 @@
             dog.position.set(-15, 0.4, -15);
         });
 
+        // ゲームパッドの入力を取得する関数
+        function updateGamepad() {
+            const gamepads = navigator.getGamepads();
+            const gp = gamepads[0];
+            if (!gp) return;
+
+            // --- 左スティック (移動) ---
+            const lx = gp.axes[0];
+            const ly = gp.axes[1];
+            if (Math.abs(lx) > 0.1 || Math.abs(ly) > 0.1) {
+                leftJoy.vector.set(lx, ly);
+                // スティックの見た目も動かしたい場合は以下を追加
+                const maxLen = leftJoy.container.offsetWidth / 2;
+                leftJoy.stick.style.transform = `translate(${lx * maxLen}px, ${ly * maxLen}px)`;
+            } else if (!leftJoy.active) {
+                leftJoy.vector.set(0, 0);
+                leftJoy.stick.style.transform = `translate(0, 0)`;
+            }
+
+            // --- 右スティック (視点) ---
+            const rx = gp.axes[2];
+            const ry = gp.axes[3];
+            if (Math.abs(rx) > 0.1 || Math.abs(ry) > 0.1) {
+                rightJoy.vector.set(rx, ry);
+                // 元のプログラムの if (rightJoy.active) を通るように強制的に true にする
+                rightJoy.active = true; 
+                
+                // スティックの見た目も連動
+                const maxLen = rightJoy.container.offsetWidth / 2;
+                rightJoy.stick.style.transform = `translate(${rx * maxLen}px, ${ry * maxLen}px)`;
+            } else {
+                // スティックが中央に戻ったら、マウスで操作していない時だけ active を false に
+                if (!rightJoy.activeGamepadOnly) { // このフラグで管理
+                    rightJoy.vector.set(0, 0);
+                    rightJoy.stick.style.transform = `translate(0, 0)`;
+                    
+                    // マウス/タッチで操作中（pointerdown中）でなければ false に戻す
+                    // ここで JavaScript 本来の event listener と競合しないように判定
+                    if (!navigator.maxTouchPoints || !rightJoy.isPointerDown) {
+                        rightJoy.active = false;
+                    }
+                }
+            }
+
+            // --- ボタン操作 ---
+            // Aボタン (buttons[0])
+            if (gp.buttons[0].pressed) {
+                if (!gp.buttons[0].lastState) {
+                    // もしクリア画面が表示されていたら、Play Againボタンを押す
+                    if (isCleared) {
+                        document.getElementById('restart-btn-clear').click();
+                    } else {
+                        // 通常時は視点切り替え
+                        viewBtn.click();
+                    }
+                }
+            }
+            gp.buttons[0].lastState = gp.buttons[0].pressed;
+
+            // Startボタン (buttons[9])
+            if (gp.buttons[9].pressed) {
+                resetBtn.click();
+            }
+        }
+
         // ゲームクリア判定変数
         let isCleared = false;
 
@@ -339,6 +404,9 @@
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+
+            updateGamepad(); // ゲームパッドの状態を更新
+
             const dt = Math.min(clock.getDelta(), 0.05);
 
             // 1. 移動：左スティック
@@ -419,7 +487,12 @@
         // --- クリア画面表示関数 ---
         function showClearScreen() {
             isCleared = true;
-            document.getElementById('clear-screen').style.display = 'flex';
+            const screen = document.getElementById('clear-screen');
+            screen.style.display = 'flex';
+
+            // ゲームパッド用に、ボタンにフォーカスを当てる
+            const restartBtn = document.getElementById('restart-btn-clear');
+            restartBtn.focus(); 
         }
 
         // --- リスタート処理の統合 ---
